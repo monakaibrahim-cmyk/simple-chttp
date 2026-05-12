@@ -36,7 +36,8 @@ void serve(int client, readonly char* filename)
     long size = ftell(file);
     rewind(file);
 
-    char* content = malloc(size);
+    char* content = malloc(size + 1);
+    content[size] = '\0';
 
     if (!content)
     {
@@ -180,26 +181,40 @@ void server_initialize(readonly char* host, readonly int port)
         address.sin_addr.s_addr = INADDR_ANY;
     }
 
-#ifndef _WIN32
-    bind(server, (struct sockaddr*)&address, sizeof(address));
-    listen(server, 10);
-#else
+#ifdef _WIN32
     if (bind(server, (struct sockaddr*)&address, sizeof(address)) == SOCKET_ERROR)
+#else
+    if (bind(server, (struct sockaddr*)&address, sizeof(address)) < 0)
+#endif
     {
-        LOG_FATAL("Bind Failed!");
+        
+#ifdef _WIN32
+        LOG_FATAL("Bind Failed! WSA Error=%d", socket_error());
         closesocket(server);
         WSACleanup();
+#else
+        LOG_FATAL("Bind Failed! errno=%d", socket_error());
+        close(server);
+#endif
         exit(EXIT_FAILURE);
     }
 
+#ifdef _WIN32
     if (listen(server, 10) == SOCKET_ERROR)
+#else
+    if (listen(server, 10) < 0)
+#endif
     {
-        LOG_FATAL("Listen Failed!");
+#ifdef _WIN32
+        LOG_FATAL("Listen Failed! WSA Error=%d", socket_error());
         closesocket(server);
         WSACleanup();
+#else
+        LOG_FATAL("Listen Failed! errno=%d", socket_error());
+        close(server);
+#endif
         exit(EXIT_FAILURE);
     }
-#endif
 
     LOG_INFO("HTTP Server Started on http://%s:%d", host, port);
 
@@ -217,9 +232,15 @@ void server_initialize(readonly char* host, readonly int port)
         
         if (result > 0 && FD_ISSET(server, &set))
         {
+#ifdef _WIN32
+            client = accept(server, (struct sockaddr*)&address, &length);
+
+            if (client == INVALID_SOCKET)
+#else
             client = accept(server, (struct sockaddr*)&address, (socklen_t*)&length);
 
             if (client < 0)
+#endif
             {
                 continue;
             }
@@ -231,6 +252,8 @@ void server_initialize(readonly char* host, readonly int port)
 #ifdef _WIN32
     closesocket(server);
     WSACleanup();
+#else
+    close(server);
 #endif
 }
 

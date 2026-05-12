@@ -15,14 +15,19 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
+#define socket_error() WSAGetLastError()
+
 extern SOCKET server, client;
 #else
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <sys/time.h>
+
+#define socket_error() errno
 
 extern int server, client;
 #endif

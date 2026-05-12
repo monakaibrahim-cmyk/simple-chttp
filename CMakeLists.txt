@@ -20,6 +20,11 @@ find_package(Threads REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC Threads::Threads)
 
 if (WIN32)
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
+        ws2_32
+        dbghelp
+    )
+
     if (MSVC)
         target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
             /utf-8
@@ -35,7 +40,7 @@ if (WIN32)
     endif()
 else()
     if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-        target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC m)
+        target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE m)
 
         target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
             -finput-charset=UTF-8

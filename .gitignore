@@ -58,6 +58,9 @@ dkms.conf
 build/
 assembly/
 
+# Logs
+*.log
+
 # Configs
 .env
 *.cfg
