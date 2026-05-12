@@ -329,14 +329,14 @@ static void write_errors(severity_level level, const char* file, int line, const
         {
             printf("Timestamp: %-10s.%03d\n", buffer, milliseconds);
             printf("Severity:  %s%-10s%s\n", _cstr[level], _lstr[level], RESET);
-            printf("Thread:    %s%-10lu%s\n", GREEN, (unsigned long)pthread_self(), RESET);
+            printf("Thread:    %s%-10lu%s\n", GREEN, thread_id(), RESET);
             printf("Location:  %s%-10s%s:%s%d%s (%s)\n", YELLOW, file, RESET, YELLOW, line, RESET, function);
         }
         else
         {
             printf("Timestamp: %-10s.%03d\n", buffer, milliseconds);
             printf("Severity:  %-10s\n", _lstr[level]);
-            printf("Thread:    %-10lu\n", (unsigned long)pthread_self());
+            printf("Thread:    %-10lu\n", thread_id());
             printf("Location:  %-10s:%d (%s)\n", file, line, function);
         }
 
@@ -353,7 +353,7 @@ static void write_errors(severity_level level, const char* file, int line, const
         fprintf(State.file, "%s", header);
         fprintf(State.file, "Timestamp: %-10s.%03d\n", buffer, milliseconds);
         fprintf(State.file, "Severity:  %-10s\n", _lstr[level]);
-        fprintf(State.file, "Thread:    %-10lu\n", (unsigned long)pthread_self());
+        fprintf(State.file, "Thread:    %-10lu\n", thread_id());
         fprintf(State.file, "Location:  %-10s:%d (%s)\n", file, line, function);
         fprintf(State.file, "Message:\n");
         indent(State.file, 4, msg);

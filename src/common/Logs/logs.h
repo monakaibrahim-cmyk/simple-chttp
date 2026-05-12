@@ -30,6 +30,7 @@ static inline unsigned long thread_id(void)
 {
     return GetCurrentThreadId();
 }
+
 #else
 #include <pthread.h>
 #include <execinfo.h>
@@ -54,6 +55,7 @@ static inline unsigned long thread_id(void)
 {
     return (unsigned long)pthread_self();
 }
+
 #endif
 
 #define BLACK                                      "\033[30m"
