@@ -56,7 +56,11 @@ dkms.conf
 
 # Build folder
 build/
+assembly/
 
 # Configs
 .env
 *.cfg
+
+# scripts
+*.sh

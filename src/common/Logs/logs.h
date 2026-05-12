@@ -4,6 +4,58 @@
 #include <stdbool.h>
 #include <string.h>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+
+#include <windows.h>
+#include <dbghelp.h>
+
+#pragma comment(lib, "Dbghelp.lib")
+
+typedef HANDLE mutex_t;
+
+#define MUTEX_INIT CreateMutex(NULL, FALSE, NULL)
+
+static inline void mutex_lock(mutex_t m)
+{
+    WaitForSingleObject(m, INFINITE);
+}
+
+static inline void mutex_unlock(mutex_t m)
+{
+    ReleaseMutex(m);
+}
+
+static inline unsigned long thread_id(void)
+{
+    return GetCurrentThreadId();
+}
+#else
+#include <pthread.h>
+#include <execinfo.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+typedef pthread_mutex_t mutex_t;
+
+#define MUTEX_INIT PTHREAD_MUTEX_INITIALIZER
+
+static inline void mutex_lock(mutex_t* m)
+{
+    pthread_mutex_lock(m);
+}
+
+static inline void mutex_unlock(mutex_t* m)
+{
+    pthread_mutex_unlock(m);
+}
+
+static inline unsigned long thread_id(void)
+{
+    return (unsigned long)pthread_self();
+}
+#endif
+
 #define BLACK                                      "\033[30m"
 #define RED                                        "\033[31m"
 #define GREEN                                      "\033[32m"

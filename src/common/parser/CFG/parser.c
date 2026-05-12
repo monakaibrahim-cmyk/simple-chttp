@@ -1,7 +1,7 @@
 #include "parser.h"
 #include "common/Logs/logs.h"
 
-#ifdef __linux__
+#ifndef _WIN32
 #include <linux/limits.h>
 #endif
 #include <stdlib.h>

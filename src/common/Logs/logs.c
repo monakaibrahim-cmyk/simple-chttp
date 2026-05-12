@@ -1,27 +1,27 @@
 #include "logs.h"
 
-#include <execinfo.h>
 #include <math.h>
-#include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/time.h>
 #include <time.h>
-#include <unistd.h>
 
 static struct
 {
     FILE* file;
     severity_level level;
     bool enabled;
-    pthread_mutex_t lock;
+    mutex_t lock;
 } State =
 {
     NULL,
     debug,
     false,
+#ifdef _WIN32
+    NULL
+#else
     PTHREAD_MUTEX_INITIALIZER
+#endif
 };
 
 static readonly char* _lstr[] =
@@ -46,14 +46,21 @@ static readonly char* _cstr[] =
 
 static Logger* init(readonly char* file)
 {
-    pthread_mutex_lock(&State.lock);
+#ifdef _WIN32
+    if (State.lock == NULL)
+    {
+        State.lock = CreateMutex(NULL, FALSE, NULL);
+    }
+#endif
+
+    mutex_lock(&State.lock);
 
     if (file)
     {
         State.file = fopen(file, "a");
     }
 
-    pthread_mutex_unlock(&State.lock);
+    mutex_unlock(&State.lock);
 
     return &Logs;
 }
@@ -121,6 +128,31 @@ static void _indent_stdout(int padding, readonly char* content)
 
 static void _indent_stack_trace(FILE* out, int padding)
 {
+#ifdef _WIN32
+    void* stack[32];
+    HANDLE process = GetCurrentProcess();
+
+    SymInitialize(process, NULL, TRUE);
+
+    WORD frames = CaptureStackBackTrace(0, 32, stack, NULL);
+
+    SYMBOL_INFO* symbol =
+        (SYMBOL_INFO*)calloc(sizeof(SYMBOL_INFO) + 256, 1);
+
+    symbol->MaxNameLen = 255;
+    symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+
+    fprintf(out, "Stack Trace:\n");
+
+    for (WORD i = 0; i < frames; i++)
+    {
+        SymFromAddr(process, (DWORD64)(stack[i]), 0, symbol);
+
+        fprintf(out, "%*s%d: %s - 0x%0llX\n", padding, "", i, symbol->Name, symbol->Address);
+    }
+
+    free(symbol);
+#else
     void* array[32];
     int size = backtrace(array, 32);
     char** symbols = backtrace_symbols(array, size);
@@ -136,21 +168,40 @@ static void _indent_stack_trace(FILE* out, int padding)
 
         free(symbols);
     }
+#endif
 }
 
 static void writec(severity_level level, const char* file, int line, const char* function, const char* fmt, ...)
 {
-    pthread_mutex_lock(&State.lock);
+    mutex_lock(&State.lock);
 
     if (level < State.level)
     {
-        pthread_mutex_unlock(&State.lock);
+        mutex_unlock(&State.lock);
         return;
     }
 
     char buffer[30];
+    // struct timeval tv;
+    // gettimeofday(&tv, NULL);
+
+    time_t now = time(NULL);
+
+#ifdef _WIN32
+
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+
+    int milliseconds = st.wMilliseconds;
+
+#else
+
     struct timeval tv;
     gettimeofday(&tv, NULL);
+
+    int milliseconds = (int)(tv.tv_usec / 1000);
+
+#endif
 
     int milliseconds = lrint(tv.tv_usec / 1000.0);
 
@@ -160,9 +211,17 @@ static void writec(severity_level level, const char* file, int line, const char*
         tv.tv_sec++;
     }
 
-    struct tm* t = localtime(&tv.tv_sec);
+    // struct tm* t = localtime(&tv.tv_sec);
+    struct tm tm_info;
 
-    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", t);
+#ifdef _WIN32
+    localtime_s(&tm_info, &now);
+#else
+    localtime_r(&now, &tm_info);
+#endif
+
+    // strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", t);
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm_info);
 
     char msg[1024];
     va_list args;
@@ -223,16 +282,16 @@ static void writec(severity_level level, const char* file, int line, const char*
         fflush(State.file);
     }
 
-    pthread_mutex_unlock(&State.lock);
+    mutex_unlock(&State.lock);
 }
 
 static void write_errors(severity_level level, const char* file, int line, const char* function, const char* fmt, ...)
 {
-    pthread_mutex_lock(&State.lock);
+    mutex_lock(&State.lock);
 
     if (level < warn)
     {
-        pthread_mutex_unlock(&State.lock);
+        mutex_unlock(&State.lock);
         return;
     }
 
@@ -306,7 +365,7 @@ static void write_errors(severity_level level, const char* file, int line, const
         fflush(State.file);
     }
 
-    pthread_mutex_unlock(&State.lock);
+    mutex_unlock(&State.lock);
 }
 
 Logger Logs =

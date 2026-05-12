@@ -180,7 +180,7 @@ void server_initialize(readonly char* host, readonly int port)
         address.sin_addr.s_addr = INADDR_ANY;
     }
 
-#ifdef __linux__
+#ifndef _WIN32
     bind(server, (struct sockaddr*)&address, sizeof(address));
     listen(server, 10);
 #else
