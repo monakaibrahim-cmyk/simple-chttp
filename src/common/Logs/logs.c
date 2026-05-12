@@ -284,20 +284,33 @@ static void write_errors(severity_level level, const char* file, int line, const
     }
 
     char buffer[30];
+    time_t now = time(NULL);
+
+#ifdef _WIN32
+
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+
+    int milliseconds = st.wMilliseconds;
+
+#else
+
     struct timeval tv;
     gettimeofday(&tv, NULL);
 
-    int milliseconds = lrint(tv.tv_usec / 1000.0);
+    int milliseconds = (int)(tv.tv_usec / 1000);
 
-    if (milliseconds >= 1000)
-    {
-        milliseconds -= 1000;
-        tv.tv_sec++;
-    }
+#endif
 
-    struct tm* t = localtime(&tv.tv_sec);
+    struct tm tm_info;
 
-    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", t);
+#ifdef _WIN32
+    localtime_s(&tm_info, &now);
+#else
+    localtime_r(&now, &tm_info);
+#endif
+
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm_info);
 
     char msg[1024];
     va_list args;

@@ -60,8 +60,6 @@ void handle_exit_signal(int signal)
 
 int main(int argc, char** argv)
 {
-    signal(SIGINT, handle_exit_signal);
-
 #ifdef _WIN32
     hStdin = GetStdHandle(STD_INPUT_HANDLE);
     hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -69,7 +67,7 @@ int main(int argc, char** argv)
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 
-    SetConsoleCtrlHandler(signal_handler, TRUE);
+    SetConsoleCtrlHandler(handle_exit_signal, TRUE);
     GetConsoleMode(hStdin, &oldMode);
 
     DWORD newMode = oldMode;
@@ -85,6 +83,8 @@ int main(int argc, char** argv)
     ci.dwSize = 1;
     SetConsoleCursorInfo(hStdout, &ci);
 #else
+    signal(SIGINT, handle_exit_signal);
+    
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
     newt.c_lflag &= ~(ECHO | ICANON);
