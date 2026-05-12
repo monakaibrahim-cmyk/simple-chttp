@@ -182,8 +182,6 @@ static void writec(severity_level level, const char* file, int line, const char*
     }
 
     char buffer[30];
-    // struct timeval tv;
-    // gettimeofday(&tv, NULL);
 
     time_t now = time(NULL);
 
@@ -203,15 +201,6 @@ static void writec(severity_level level, const char* file, int line, const char*
 
 #endif
 
-    int milliseconds = lrint(tv.tv_usec / 1000.0);
-
-    if (milliseconds >= 1000)
-    {
-        milliseconds -= 1000;
-        tv.tv_sec++;
-    }
-
-    // struct tm* t = localtime(&tv.tv_sec);
     struct tm tm_info;
 
 #ifdef _WIN32
@@ -220,7 +209,6 @@ static void writec(severity_level level, const char* file, int line, const char*
     localtime_r(&now, &tm_info);
 #endif
 
-    // strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", t);
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm_info);
 
     char msg[1024];
