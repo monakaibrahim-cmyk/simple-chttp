@@ -17,7 +17,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 )
 
 find_package(Threads REQUIRED)
-target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC Threads::Threads m)
+target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC Threads::Threads)
 
 if (WIN32)
     if (MSVC)
@@ -35,6 +35,8 @@ if (WIN32)
     endif()
 else()
     if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC m)
+
         target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
             -finput-charset=UTF-8
             -fexec-charset=UTF-8
