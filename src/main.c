@@ -2,7 +2,6 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <unistd.h>
 
 // #define CONFIG_MODE_CFG
 #define CONFIG_MODE_ENV
@@ -42,6 +41,7 @@ BOOL WINAPI handle_exit_signal(DWORD signal)
 }
 #else
 #include <termios.h>
+#include <unistd.h>
 
 static struct termios oldt, newt;
 
