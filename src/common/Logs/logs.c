@@ -1,6 +1,5 @@
 #include "logs.h"
 
-#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,7 +30,9 @@ static readonly char* _lstr[] =
     "INFO",
     "WARN",
     "ERROR",
-    "FATAL"
+    "FATAL",
+    "HTTP",
+    "DATABASE"
 };
 
 static readonly char* _cstr[] =
@@ -41,10 +42,12 @@ static readonly char* _cstr[] =
     GREEN,
     YELLOW,
     RED,
-    MAGENTA
+    MAGENTA,
+    BLUE,
+    CYAN
 };
 
-static Logger* init(readonly char* file)
+static Logger* init(readonly char* folder, readonly char* file)
 {
 #ifdef _WIN32
     if (State.lock == NULL)
@@ -55,9 +58,33 @@ static Logger* init(readonly char* file)
 
     mutex_lock(&State.lock);
 
-    if (file)
+    // check if folder exists
+    if (!access(folder, F_OK) == 0)
     {
-        State.file = fopen(file, "a");
+        // check if successfully created the folder
+        if (!mkdir(folder, 0777) == 0)
+        {
+            printf("Error Creating Folder!");
+            return &Logs;
+        }
+    }
+
+    size_t length = strlen(folder) + strlen(PATH_SEPARATOR) + strlen(file) + 1;
+    char* full_path = malloc(length);
+
+    if (full_path == NULL)
+    {
+        perror("Memory Allocation failed!");
+        return &Logs;
+    }
+
+    strcpy(full_path, folder);
+    strcat(full_path, PATH_SEPARATOR);
+    strcat(full_path, file);
+    
+    if (full_path)
+    {
+        State.file = fopen(full_path, "a");
     }
 
     mutex_unlock(&State.lock);

@@ -11,7 +11,6 @@
 #define MAX_KEY         64
 #define MAX_VALUE       128
 #define MAX_ENTRIES     100
-#define readonly        const
 #define CONFIG_FILE     "./Config.cfg"
 
 typedef struct
@@ -26,12 +25,9 @@ typedef struct
     int count;
 } Config;
 
-static char* config_trim(char* str);
 void config_initialize(Config* cfg);
-void config_add(Config* cfg, readonly char* key, readonly char* value);
+void config_add(Config* cfg, const char* key, const char* value);
 bool config_load(Config* cfg);
-static bool config_default(void); 
-readonly char* config_get(Config* cfg, readonly char* key);
+const char* config_get(Config* cfg, const char* key);
 
 #endif // PARSER_H
-

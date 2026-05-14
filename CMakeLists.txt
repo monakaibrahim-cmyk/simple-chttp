@@ -8,6 +8,10 @@ set(CMAKE_C_EXTENSIONS OFF)
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS "${SRC_DIR}/*.c")
 
+option(ENABLE_LOGGING "Enable File and Console Logging." ON)
+option(USE_ENV_CONFIG "Use ENV as configuration file." ON)
+option(USE_CFG_CONFIG "Use CFG as Configuration file." OFF)
+
 add_executable(${CMAKE_PROJECT_NAME} ${SRC_FILES})
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE 
     ${SRC_DIR}
@@ -18,6 +22,24 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 find_package(Threads REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC Threads::Threads)
+
+if (ENABLE_LOGGING)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE ENABLE_LOGGING)
+endif()
+
+if (USE_ENV_CONFIG)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE USE_ENV_CONFIG)
+elseif (USE_CFG_CONFIG)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE USE_CFG_CONFIG)
+endif()
+
+if (USE_ENV_CONFIG AND USE_CFG_CONFIG)
+    message(FATAL_ERROR "USE_ENV_CONFIG and USE_CFG_CONFIG cannot both be ON.")
+endif()
+
+if (NOT USE_ENV_CONFIG AND NOT USE_CFG_CONFIG)
+    message(FATAL_ERROR "One of USE_ENV_CONFIG or USE_CFG_CONFIG must be ON.")
+endif()
 
 if (WIN32)
     target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
@@ -32,7 +54,7 @@ if (WIN32)
             /Zi
         )
     else()
-        target_compile_options(${PROJECT_NAME} PRIVATE
+        target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
             -Wall
             -Wextra
             -Winvalid-pch
@@ -48,8 +70,6 @@ else()
             -Wall
             -Wextra
             -Wpedantic
-            -finput-charset=UTF-8
-            -fexec-charset=UTF-8
             -rdynamic
             -g
             -save-temps=obj

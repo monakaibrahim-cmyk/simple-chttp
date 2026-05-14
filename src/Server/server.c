@@ -1,5 +1,8 @@
 #include "server.h"
+
+#ifdef ENABLE_LOGGING
 #include "common/Logs/logs.h"
+#endif
 
 #ifdef _WIN32
 SOCKET server, client;
@@ -9,27 +12,13 @@ int server, client;
 
 volatile bool running = true;
 
-// Helper
-bool exists(readonly char* filename)
-{
-    FILE* file = fopen(filename, "r");
-
-    if (file)
-    {
-        fclose(file);
-        return true;
-    }
-
-    return false;
-}
-
-void serve(int client, readonly char* filename)
+bool serve(int client, const char* filename)
 {
     FILE* file = fopen(filename, "rb");
 
     if (!file)
     {
-        return;
+        return false;
     }
     
     fseek(file, 0, SEEK_END);
@@ -42,23 +31,23 @@ void serve(int client, readonly char* filename)
     if (!content)
     {
         fclose(file);
-        return;
+        return false;
     }
 
     size_t read_size = fread(content, 1, size, file);
 
-    if (read_size != size)
+    if (read_size != (size_t)size)
     {
         fclose(file);
         free(content);
-        return;
+        return false;
     }
 
     fclose(file);
 
     char header[512];
 
-    sprintf(header, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: %ld\r\n\r\n", size);
+    snprintf(header, sizeof(header), "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\nContent-Length: %ld\r\n\r\n", size);
 #ifdef _WIN32
     send(client, header, strlen(header), 0);
     send(client, content, size, 0);
@@ -67,6 +56,8 @@ void serve(int client, readonly char* filename)
     write(client, content, size);
 #endif
     free(content);
+
+    return true;
 }
 
 #ifdef _WIN32
@@ -92,39 +83,45 @@ void server_handle_request(int client)
 
     buffer[n] = '\0';
 
+#ifdef ENABLE_LOGGING
     LOG_DEBUG("%s", buffer);
+#endif
 
     sscanf(buffer, "%9s %99s", method, path);
 
-    LOG_INFO("Request: %s %s", method, path);
+#ifdef ENABLE_LOGGING
+    LOG_HTTP("Request: %s %s", method, path);
+#endif
 
     if (strcmp(path, "/") == 0)
     {
         strcpy(path, "/index.html");
     }
 
-    snprintf(full_path, sizeof(full_path), "%s%s", ROOT_DIRECTORY, path);
-
-    if (exists(full_path))
+    if (strstr(path, "..") != NULL)
     {
-        if (strstr(full_path, ".html") != NULL)
-        {
-            serve(client, full_path);
-        }
-        else 
-        {
-            serve(client, full_path);
-        }
-    }
-    else 
-    {
-        char* response = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\n404 - File Not Found";
+        const char* response = "HTTP/1.1 403 Forbidden\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n403 - Forbidden";
 
 #ifdef _WIN32
         send(client, response, strlen(response), 0);
 #else
         write(client, response, strlen(response));
 #endif
+    }
+    else
+    {
+        snprintf(full_path, sizeof(full_path), "%s%s", ROOT_DIRECTORY, path);
+
+        if (!serve(client, full_path))
+        {
+            const char* response = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n404 - File Not Found";
+
+#ifdef _WIN32
+            send(client, response, strlen(response), 0);
+#else
+            write(client, response, strlen(response));
+#endif
+        }
     }
 
 #ifdef _WIN32
@@ -134,7 +131,7 @@ void server_handle_request(int client)
 #endif
 }
 
-void server_initialize(readonly char* host, readonly int port)
+void server_initialize(const char* host, const int port)
 {
 #ifdef _WIN32
     WSADATA wsa;
@@ -147,6 +144,7 @@ void server_initialize(readonly char* host, readonly int port)
 #endif
 
     struct sockaddr_in address;
+    memset(&address, 0, sizeof(address));
     int option = 1;
     int length = sizeof(address);
 
@@ -189,11 +187,15 @@ void server_initialize(readonly char* host, readonly int port)
     {
         
 #ifdef _WIN32
+#ifdef ENABLE_LOGGING
         LOG_FATAL("Bind Failed! WSA Error=%d", socket_error());
+#endif
         closesocket(server);
         WSACleanup();
 #else
+#ifdef ENABLE_LOGGING
         LOG_FATAL("Bind Failed! errno=%d", socket_error());
+#endif
         close(server);
 #endif
         exit(EXIT_FAILURE);
@@ -206,17 +208,23 @@ void server_initialize(readonly char* host, readonly int port)
 #endif
     {
 #ifdef _WIN32
+#ifdef ENABLE_LOGGING
         LOG_FATAL("Listen Failed! WSA Error=%d", socket_error());
+#endif
         closesocket(server);
         WSACleanup();
 #else
+#ifdef ENABLE_LOGGING
         LOG_FATAL("Listen Failed! errno=%d", socket_error());
+#endif
         close(server);
 #endif
         exit(EXIT_FAILURE);
     }
 
-    LOG_INFO("HTTP Server Started on http://%s:%d", host, port);
+#ifdef ENABLE_LOGGING
+    LOG_HTTP("HTTP Server Started on http://%s:%d", host, port);
+#endif
 
     fd_set set;
     struct timeval timeout;
@@ -256,4 +264,3 @@ void server_initialize(readonly char* host, readonly int port)
     close(server);
 #endif
 }
-

@@ -17,6 +17,5 @@ static char* ltrim(char* s);
 static void rtrim(char* s);
 static char* unquote(char* s);
 void env_load();
-static bool config_default(void); 
 
 #endif // PARSER_H

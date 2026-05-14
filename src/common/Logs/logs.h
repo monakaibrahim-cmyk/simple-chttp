@@ -9,12 +9,18 @@
 
 #include <windows.h>
 #include <dbghelp.h>
+#include <direct.h>
+#include <io.h>
 
 #pragma comment(lib, "Dbghelp.lib")
 
 typedef HANDLE mutex_t;
 
 #define MUTEX_INIT CreateMutex(NULL, FALSE, NULL)
+#define F_OK 0
+#define mkdir(dir, mode) _mkdir(dir)
+#define access _access
+#define PATH_SPATH_SEPARATOR "\\"
 
 static inline void mutex_lock(mutex_t m)
 {
@@ -34,12 +40,14 @@ static inline unsigned long thread_id(void)
 #else
 #include <pthread.h>
 #include <execinfo.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
 
 typedef pthread_mutex_t mutex_t;
 
 #define MUTEX_INIT PTHREAD_MUTEX_INITIALIZER
+#define PATH_SEPARATOR "/"
 
 static inline void mutex_lock(mutex_t* m)
 {
@@ -79,14 +87,16 @@ typedef enum
     info,
     warn,
     error,
-    fatal
+    fatal,
+    http,
+    database
 } severity_level;
 
 typedef struct Logger Logger;
 
 struct Logger
 {
-    Logger* (*init)(readonly char* file);
+    Logger* (*init)(readonly char* folder, readonly char* file);
     Logger* (*set_level)(severity_level level);
     Logger* (*set_color)(bool flag);
     void (*write)(severity_level level, readonly char* file, int line, readonly char* function, readonly char* fmt, ...);
@@ -124,6 +134,12 @@ extern Logger Logs;
     
 #define LOG_FATAL(fmt, ...) \
     Logs.write_err(fatal, trim_path(__FILE__), __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
+
+#define LOG_HTTP(fmt, ...) \
+    Logs.write(http, trim_path(__FILE__), __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
+
+#define LOG_DATABASE(fmt, ...) \
+    Logs.write(database, trim_path(__FILE__), __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
 
 #endif // LOGS_H
 

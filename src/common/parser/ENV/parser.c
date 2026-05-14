@@ -1,5 +1,13 @@
 #include "parser.h"
+
+#ifdef ENABLE_LOGGING
 #include "common/Logs/logs.h"
+#endif
+
+static bool config_default(void);
+static char* ltrim(char* s);
+static void rtrim(char* s);
+static char* unquote(char* s);
 
 static char* ltrim(char* s)
 {
@@ -51,7 +59,9 @@ void env_load()
     {
         if (!config_default())
         {
+#ifdef ENABLE_LOGGING
             LOG_ERROR("Failed to create default .env file.");
+#endif
             exit(EXIT_FAILURE);
         }
 
@@ -59,7 +69,9 @@ void env_load()
 
         if (!file)
         {
+#ifdef ENABLE_LOGGING
             LOG_ERROR("Failed to reopen .env file.");
+#endif
             exit(EXIT_FAILURE);
         }
     }
@@ -115,7 +127,9 @@ static bool config_default(void)
 
     if (file == NULL)
     {
+#ifdef ENABLE_LOGGING
         LOG_ERROR("Error Creating .env file!");
+#endif
         return false;
     }
 
@@ -126,4 +140,3 @@ static bool config_default(void)
 
     return true;
 }
-

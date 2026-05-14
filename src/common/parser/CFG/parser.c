@@ -1,11 +1,14 @@
 #include "parser.h"
-#include "common/Logs/logs.h"
 
-#ifndef _WIN32
-#include <linux/limits.h>
+#ifdef ENABLE_LOGGING
+#include "common/Logs/logs.h"
 #endif
+
 #include <stdlib.h>
 #include <string.h>
+
+static bool config_default(void);
+static char* config_trim(char* str);
 
 static char* config_trim(char* str)
 {
@@ -38,7 +41,7 @@ void config_initialize(Config *cfg)
     cfg->count = 0;
 }
 
-void config_add(Config *cfg, readonly char *key, readonly char *value)
+void config_add(Config *cfg, const char *key, const char *value)
 {
     if (cfg->count >= MAX_ENTRIES)
     {
@@ -62,7 +65,9 @@ bool config_load(Config* cfg)
     {
         if (!config_default())
         {
+#ifdef ENABLE_LOGGING
             LOG_ERROR("Failed to create default Config.");
+#endif
             exit(EXIT_FAILURE);
         }
 
@@ -70,7 +75,9 @@ bool config_load(Config* cfg)
 
         if (!file)
         {
+#ifdef ENABLE_LOGGING
             LOG_ERROR("Failed to reopen Config file.");
+#endif
             exit(EXIT_FAILURE);
         }
     }
@@ -112,7 +119,9 @@ static bool config_default(void)
 
     if (file == NULL)
     {
+#ifdef ENABLE_LOGGING
         LOG_ERROR("Error Creating Config File!");
+#endif
         return false;
     }
 
@@ -124,7 +133,7 @@ static bool config_default(void)
     return true;
 }
 
-readonly char* config_get(Config* cfg, readonly char* key)
+const char* config_get(Config* cfg, const char* key)
 {
     for (int i = 0; i < cfg->count; i++)
     {
@@ -136,4 +145,3 @@ readonly char* config_get(Config* cfg, readonly char* key)
 
     return NULL;
 }
-

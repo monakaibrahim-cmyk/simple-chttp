@@ -3,17 +3,17 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-// #define CONFIG_MODE_CFG
-#define CONFIG_MODE_ENV
-
-#if defined(CONFIG_MODE_CFG)
-#include "common/parser/CFG/parser.h"
-#elif defined(CONFIG_MODE_ENV)
+#ifdef USE_ENV_CONFIG
 #include "common/parser/ENV/parser.h"
+#elif defined(USE_CFG_CONFIG)
+#include "common/parser/CFG/parser.h"
 #endif
 
 #include "Server/server.h"
+
+#ifdef ENABLE_LOGGING
 #include "common/Logs/logs.h"
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -47,12 +47,11 @@ static struct termios oldt, newt;
 
 void handle_exit_signal(int signal)
 {
+    (void)signal;
     running = false;
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     printf("\033[?25h");
     fflush(stdout);
-    close(client);
-    exit(0);
 }
 #endif
 
@@ -94,11 +93,13 @@ int main(int argc, char** argv)
     fflush(stdout);
 
 #endif
-    Logs.init("app.log")
+#ifdef ENABLE_LOGGING
+    Logs.init("Logs", "app.log")
         ->set_level(debug)
         ->set_color(true);
+#endif
 
-#if defined(CONFIG_MODE_CFG)
+#ifdef USE_CFG_CONFIG
     Config cfg;
     config_initialize(&cfg);
 
@@ -107,12 +108,17 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    server_initialize(config_get(&cfg, "host"), atoi(config_get(&cfg, "port")));
-#elif defined(CONFIG_MODE_ENV)
+    const char* host = config_get(&cfg, "host");
+    const char* port_str = config_get(&cfg, "port");
+    int port = port_str ? atoi(port_str) : 8080;
+    server_initialize(host, port);
+#elif defined(USE_ENV_CONFIG)
     env_load();
-    server_initialize(getenv("HOST"), atoi(getenv("PORT")));
+    const char* host = getenv("HOST");
+    const char* port_str = getenv("PORT");
+    int port = port_str ? atoi(port_str) : 8080;
+    server_initialize(host, port);
 #endif
-    
 
     return EXIT_SUCCESS;
 }
