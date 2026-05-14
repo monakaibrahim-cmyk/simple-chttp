@@ -238,11 +238,39 @@ static void writec(severity_level level, const char* file, int line, const char*
 
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm_info);
 
-    char msg[1024];
+    char stack_msg[1024];
+    char* msg = stack_msg;
     va_list args;
+
     va_start(args, fmt);
-    vsnprintf(msg, sizeof(msg), fmt, args);
+    int needed = vsnprintf(NULL, 0, fmt, args);
     va_end(args);
+
+    if (needed >= (int)sizeof(stack_msg))
+    {
+        msg = malloc(needed + 1);
+
+        if (!msg)
+        {
+            msg = stack_msg;
+            
+            va_start(args, fmt);
+            vsnprintf(msg, sizeof(stack_msg), fmt, args);
+            va_end(args);
+        }
+        else
+        {
+            va_start(args, fmt);
+            vsnprintf(msg, needed + 1, fmt, args);
+            va_end(args);
+        }
+    }
+    else
+    {
+        va_start(args, fmt);
+        vsnprintf(msg, sizeof(stack_msg), fmt, args);
+        va_end(args);
+    }
 
     if (State.enabled)
     {
@@ -297,6 +325,11 @@ static void writec(severity_level level, const char* file, int line, const char*
         fflush(State.file);
     }
 
+    if (msg != stack_msg)
+    {
+        free(msg);
+    }
+
     mutex_unlock(&State.lock);
 }
 
@@ -339,11 +372,39 @@ static void write_errors(severity_level level, const char* file, int line, const
 
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm_info);
 
-    char msg[1024];
+    char stack_msg[1024];
+    char* msg = stack_msg;
     va_list args;
+
     va_start(args, fmt);
-    vsnprintf(msg, sizeof(msg), fmt, args);
+    int needed = vsnprintf(NULL, 0, fmt, args);
     va_end(args);
+
+    if (needed >= (int)sizeof(stack_msg))
+    {
+        msg = malloc(needed + 1);
+
+        if (!msg)
+        {
+            msg = stack_msg;
+
+            va_start(args, fmt);
+            vsnprintf(msg, sizeof(stack_msg), fmt, args);
+            va_end(args);
+        }
+        else
+        {
+            va_start(args, fmt);
+            vsnprintf(msg, needed + 1, fmt, args);
+            va_end(args);
+        }
+    }
+    else
+    {
+        va_start(args, fmt);
+        vsnprintf(msg, sizeof(stack_msg), fmt, args);
+        va_end(args);
+    }
 
     const char* header = "\n================================================\n";
     const char* footer = "================================================\n\n";
@@ -393,6 +454,11 @@ static void write_errors(severity_level level, const char* file, int line, const
         fflush(State.file);
     }
 
+    if (msg != stack_msg)
+    {
+        free(msg);
+    }
+
     mutex_unlock(&State.lock);
 }
 
@@ -404,4 +470,3 @@ Logger Logs =
     .write = writec,
     .write_err = write_errors
 };
-

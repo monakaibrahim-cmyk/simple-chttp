@@ -12,6 +12,8 @@ int server, client;
 
 volatile bool running = true;
 
+static void packet(const char* buffer, int length);
+
 bool serve(int client, const char* filename)
 {
     FILE* file = fopen(filename, "rb");
@@ -60,6 +62,50 @@ bool serve(int client, const char* filename)
     return true;
 }
 
+#ifdef ENABLE_PACKET_LOGGING
+static void packet(const char* buffer, int length)
+{
+    LOG_DEBUG("Incoming packet (String):\n%s", buffer);
+
+    size_t hex_length = (size_t)length * 3 + 1;
+    char* hex_dump = malloc(hex_length);
+
+    if (hex_dump)
+    {
+        for (int i = 0; i < length; i++)
+        {
+            snprintf(hex_dump + (i * 3), 4, "%02X ", (unsigned char)buffer[i]);
+        }
+
+        LOG_DEBUG("Incoming packet (Hex):\n%s", hex_dump);
+        free(hex_dump);
+    }
+
+    size_t bin_length = (size_t)length * 9 + 1;
+    char* bin_dump = malloc(bin_length);
+    
+    if (bin_dump)
+    {
+        size_t pos = 0;
+        for (int i = 0; i < length; i++)
+        {
+            unsigned char c = buffer[i];
+            for (int b = 7; b >= 0; b--)
+            {
+                bin_dump[pos++] = (c & (1 << b)) ? '1' : '0';
+            }
+
+            bin_dump[pos++] = ' ';
+        }
+
+        bin_dump[pos] = '\0';
+        
+        LOG_DEBUG("Incoming packet (Binary):\n%s", bin_dump);
+        free(bin_dump);
+    }
+}
+#endif
+
 #ifdef _WIN32
 void server_handle_request(SOCKET client)
 #else
@@ -83,14 +129,41 @@ void server_handle_request(int client)
 
     buffer[n] = '\0';
 
-#ifdef ENABLE_LOGGING
-    LOG_DEBUG("%s", buffer);
+#ifdef ENABLE_PACKET_LOGGING
+    packet(buffer, n);
 #endif
 
     sscanf(buffer, "%9s %99s", method, path);
 
+    char* params = strchr(path, '?');
+
+    if (params)
+    {
+        *params = '\0';
+        params++;
+    }
+
 #ifdef ENABLE_LOGGING
     LOG_HTTP("Request: %s %s", method, path);
+
+    if (params)
+    {
+        char* context = NULL;
+#ifdef _WIN32
+        char* pair = strtok_s(params, "&", &context);
+#else
+        char* pair = strtok_r(params, "&", &context);
+#endif
+        while (pair != NULL)
+        {
+            LOG_HTTP("  -> Parameter: %s", pair);
+#ifdef _WIN32
+            pair = strtok_s(NULL, "&", &context);
+#else
+            pair = strtok_r(NULL, "&", &context);
+#endif
+        }
+    }
 #endif
 
     if (strcmp(path, "/") == 0)

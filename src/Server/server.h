@@ -1,6 +1,10 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#if !defined(_WIN32) && !defined(_POSIX_C_SOURCE)
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>

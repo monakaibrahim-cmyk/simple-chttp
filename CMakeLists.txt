@@ -9,6 +9,7 @@ set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS "${SRC_DIR}/*.c")
 
 option(ENABLE_LOGGING "Enable File and Console Logging." ON)
+option(ENABLE_PACKET_LOGGING "Enable Packet Logging for debugging purposes." ON)
 option(USE_ENV_CONFIG "Use ENV as configuration file." ON)
 option(USE_CFG_CONFIG "Use CFG as Configuration file." OFF)
 
@@ -24,7 +25,11 @@ find_package(Threads REQUIRED)
 target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC Threads::Threads)
 
 if (ENABLE_LOGGING)
-    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE ENABLE_LOGGING)
+    if (ENABLE_PACKET_LOGGING)
+        target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE ENABLE_LOGGING ENABLE_PACKET_LOGGING)
+    else()
+        target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE ENABLE_LOGGING)
+    endif()
 endif()
 
 if (USE_ENV_CONFIG)
