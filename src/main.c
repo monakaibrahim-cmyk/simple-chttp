@@ -111,13 +111,13 @@ int main(int argc, char** argv)
     const char* host = config_get(&cfg, "host");
     const char* port_str = config_get(&cfg, "port");
     int port = port_str ? atoi(port_str) : 8080;
-    server_initialize(host, port);
+    http_serve(host, port);
 #elif defined(USE_ENV_CONFIG)
     env_load();
     const char* host = getenv("HOST");
     const char* port_str = getenv("PORT");
     int port = port_str ? atoi(port_str) : 8080;
-    server_initialize(host, port);
+    http_serve(host, port);
 #endif
 
     return EXIT_SUCCESS;

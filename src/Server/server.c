@@ -12,9 +12,11 @@ int server, client;
 
 volatile bool running = true;
 
+static bool render(int client, const char* filename);
 static void packet(const char* buffer, int length);
+static void request(int client);
 
-bool serve(int client, const char* filename)
+static bool render(int client, const char* filename)
 {
     FILE* file = fopen(filename, "rb");
 
@@ -107,9 +109,9 @@ static void packet(const char* buffer, int length)
 #endif
 
 #ifdef _WIN32
-void server_handle_request(SOCKET client)
+static void request(SOCKET client)
 #else
-void server_handle_request(int client)
+static void request(int client)
 #endif
 {
     char buffer[MAX_SERVER_BUFFER_SIZE];
@@ -185,7 +187,7 @@ void server_handle_request(int client)
     {
         snprintf(full_path, sizeof(full_path), "%s%s", ROOT_DIRECTORY, path);
 
-        if (!serve(client, full_path))
+        if (!render(client, full_path))
         {
             const char* response = "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n404 - File Not Found";
 
@@ -204,7 +206,7 @@ void server_handle_request(int client)
 #endif
 }
 
-void server_initialize(const char* host, const int port)
+void http_serve(const char* host, const int port)
 {
 #ifdef _WIN32
     WSADATA wsa;
@@ -326,7 +328,7 @@ void server_initialize(const char* host, const int port)
                 continue;
             }
 
-            server_handle_request(client);
+            request(client);
         }
     }
 

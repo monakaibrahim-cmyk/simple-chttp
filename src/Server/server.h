@@ -41,11 +41,6 @@ extern volatile bool running;
 #define MAX_SERVER_BUFFER_SIZE              1024
 #define ROOT_DIRECTORY                      "www"
 
-#ifdef _WIN32
-void server_handle_request(SOCKET client);
-#else
-void server_handle_request(int client);
-#endif
-void server_initialize(const char* host, const int port);
+void http_serve(const char* host, const int port);
 
 #endif // SERVER_H
